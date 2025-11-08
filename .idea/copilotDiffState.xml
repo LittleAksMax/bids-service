@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/internal/service/config_service.go">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/internal/service/config_service.go" />
+              <option name="originalContent" value="package service&#10;&#10;import (&#10;&#9;&quot;github.com/LittleAksMax/bids-service/internal/repository&quot;&#10;)&#10;&#10;// ConfigurationService handles business logic for configurations&#10;type ConfigurationService struct {&#10;&#9;repo repository.ConfigurationRepository&#10;}&#10;&#10;// NewConfigurationService creates a new configuration service&#10;func NewConfigurationService(repo repository.ConfigurationRepository) *ConfigurationService {&#10;&#9;return &amp;ConfigurationService{&#10;&#9;&#9;repo: repo,&#10;&#9;}&#10;}&#10;&#10;// ProcessDueConfigurations retrieves and processes configurations that are due&#10;func (s *ConfigurationService) ProcessDueConfigurations() error {&#10;&#9;// TODO: Implement business logic for processing due configurations&#10;&#9;configs, err := s.repo.GetDueConfigurations()&#10;&#9;if err != nil {&#10;&#9;&#9;return err&#10;&#9;}&#10;&#10;&#9;// Process each configuration&#10;&#9;for _, config := range configs {&#10;&#9;&#9;// TODO: Add processing logic&#10;&#9;&#9;_ = config&#10;&#9;}&#10;&#10;&#9;return nil&#10;}&#10;" />
+              <option name="updatedContent" value="package service&#10;&#10;import (&#10;&#9;&quot;github.com/LittleAksMax/bids-service/internal/repository&quot;&#10;)&#10;&#10;// ConfigurationService handles business logic for configurations&#10;type ConfigurationService struct {&#10;&#9;repo repository.ConfigurationRepository&#10;}&#10;&#10;// NewConfigurationService creates a new configuration service&#10;func NewConfigurationService(repo repository.ConfigurationRepository) *ConfigurationService {&#10;&#9;return &amp;ConfigurationService{&#10;&#9;&#9;repo: repo,&#10;&#9;}&#10;}&#10;&#10;// ProcessDueConfigurations retrieves and processes configurations that are due&#10;func (s *ConfigurationService) ProcessDueConfigurations() error {&#10;&#9;// TODO: Implement business logic for processing due configurations&#10;&#9;configs, err := s.repo.GetDueConfigurations()&#10;&#9;if err != nil {&#10;&#9;&#9;return err&#10;&#9;}&#10;&#10;&#9;// Process each configuration&#10;&#9;for _, config := range configs {&#10;&#9;&#9;// TODO: Add processing logic&#10;&#9;&#9;_ = config&#10;&#9;}&#10;&#10;&#9;return nil&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

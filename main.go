@@ -39,11 +39,16 @@ func main() {
 		os.Getenv("AMZNADS_CLIENT_SECRET"),
 		"", // no redirect URI
 	)
-	amznAdsClient, err := amznads.NewAmazonAuthClient(adsAuthCfg, amznads.AmazonRegions.Europe)
+	amznAuthClient, err := amznads.NewAmazonAuthClient(adsAuthCfg, amznads.AmazonRegions.Europe)
+	if err != nil {
+		log.Panicf("Error initializing Amazon Auth API client: %v", err)
+	}
+	amznAdsClient, err := amznads.NewAmazonAdsAPIClient(amznAuthClient, amznads.AmazonRegions.Europe)
 	if err != nil {
 		log.Panicf("Error initializing Amazon Ads API client: %v", err)
 	}
-
+	// TODO: maybe we should implement a provider that refetches when expired
+	amznAdsClient.SetRefreshToken(refreshToken.Get())
 	pollInterval := 1 * time.Hour
 
 	// Initialize dependencies (Dependency Injection)
@@ -56,7 +61,11 @@ func main() {
 	httpServer := server.NewServer(serverCfg, configHandler)
 
 	// Scheduler
-	schedulerInstance := scheduler.NewScheduler()
+	schedulerInstance := scheduler.NewScheduler(&scheduler.Config{
+		ScheduleConfigRepo: configRepo,
+		PollInterval:       pollInterval,
+		AdsClient:          amznAdsClient,
+	})
 
 	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

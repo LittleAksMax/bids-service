@@ -35,7 +35,8 @@ func NewScheduler(cfg *Config) *Scheduler {
 // Start begins the scheduler in a goroutine
 // It polls for due configurations at the specified interval
 func (s *Scheduler) Start(ctx context.Context) {
-	ticker := time.NewTicker(s.pollInterval)
+	//ticker := time.NewTicker(s.pollInterval)
+	ticker := time.NewTicker(time.Duration(1) * time.Minute) // TODO: remove
 	defer ticker.Stop()
 
 	log.Printf("Scheduler started with poll interval: %v", s.pollInterval)

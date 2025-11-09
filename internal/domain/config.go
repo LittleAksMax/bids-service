@@ -9,4 +9,5 @@ type ScheduleConfiguration struct {
 	Marketplace string
 	DueAt       time.Time // Should be some multiple of 15 mins
 	LastUpdated time.Time
+	Interval    time.Duration
 }

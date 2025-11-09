@@ -37,14 +37,13 @@ func (h *ConfigHandler) HandleScheduleUpdate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Convert DTO to domain entity
-	config := req.ToDomain()
+	schedConfig := req.ToDomain()
 
-	// TODO: Implement actual business logic
-	// err := h.service.CreateConfiguration(config)
-	// if err != nil {
-	//     http.Error(w, err.Error(), http.StatusInternalServerError)
-	//     return
-	// }
+	err := h.repo.Put(schedConfig)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
@@ -53,11 +52,11 @@ func (h *ConfigHandler) HandleScheduleUpdate(w http.ResponseWriter, r *http.Requ
 		"status":  "success",
 		"message": "Schedule configuration created successfully",
 		"data": map[string]interface{}{
-			"userId":      config.UserID,
-			"campaignId":  config.CampaignID,
-			"marketplace": config.Marketplace,
-			"interval":    req.Interval,
-			"dueAt":       config.DueAt,
+			"userId":      schedConfig.UserID,
+			"campaignId":  schedConfig.CampaignID,
+			"marketplace": schedConfig.Marketplace,
+			"interval":    schedConfig.Interval,
+			"dueAt":       schedConfig.DueAt,
 		},
 	})
 }

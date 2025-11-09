@@ -35,9 +35,9 @@ func (r *ScheduleConfigRequest) Validate() map[string]string {
 	}
 
 	// Validate that interval is a multiple of 60 minutes
-	if r.Interval > 0 && r.Interval%60 != 0 {
-		errors["interval"] = "interval must be a multiple of 60 minutes (e.g., 15, 30, 45, 60, etc.)"
-	}
+	//if r.Interval > 0 && r.Interval%60 != 0 {
+	//	errors["interval"] = "interval must be a multiple of 60 minutes (e.g., 15, 30, 45, 60, etc.)"
+	//}
 
 	return errors
 }
@@ -46,7 +46,8 @@ func (r *ScheduleConfigRequest) Validate() map[string]string {
 func (r *ScheduleConfigRequest) ToDomain() *domain.ScheduleConfiguration {
 	// Calculate DueAt by adding the interval to the current time
 	now := time.Now()
-	dueAt := now.Add(time.Duration(r.Interval) * time.Minute)
+	interval := time.Duration(r.Interval) * time.Minute
+	dueAt := now.Add(interval)
 
 	return &domain.ScheduleConfiguration{
 		UserID:      r.UserID,
@@ -54,5 +55,6 @@ func (r *ScheduleConfigRequest) ToDomain() *domain.ScheduleConfiguration {
 		Marketplace: r.Marketplace,
 		DueAt:       dueAt,
 		LastUpdated: now,
+		Interval:    interval,
 	}
 }

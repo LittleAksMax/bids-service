@@ -34,9 +34,9 @@ func (r *ScheduleConfigRequest) Validate() map[string]string {
 		errors["interval"] = "interval is required and must be greater than 0"
 	}
 
-	// Validate that interval is a multiple of 15 minutes
-	if r.Interval > 0 && r.Interval%15 != 0 {
-		errors["interval"] = "interval must be a multiple of 15 minutes (e.g., 15, 30, 45, 60, etc.)"
+	// Validate that interval is a multiple of 60 minutes
+	if r.Interval > 0 && r.Interval%60 != 0 {
+		errors["interval"] = "interval must be a multiple of 60 minutes (e.g., 15, 30, 45, 60, etc.)"
 	}
 
 	return errors

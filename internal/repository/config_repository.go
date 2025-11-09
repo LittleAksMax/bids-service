@@ -4,11 +4,12 @@ import "github.com/LittleAksMax/bids-service/internal/domain"
 
 // ConfigurationRepository defines the interface for configuration data access
 type ConfigurationRepository interface {
-	// GetDueConfigurations returns configurations that are due for processing
-	GetDueConfigurations() ([]*domain.ScheduleConfiguration, error)
+	// GetDue returns configurations that are due for processing
+	GetDue() ([]*domain.ScheduleConfiguration, error)
 
-	// GetByUserID retrieves all configuration for a given UserID
-	GetByUserID(userID string) ([]*domain.ScheduleConfiguration, error)
+	// GetByUserID retrieves all configuration for a given UserID.
+	// Returns false if no configs for given user found.
+	GetByUserID(userID string) ([]*domain.ScheduleConfiguration, bool)
 
 	// Put updates a configuration or creates it if it doesn't exist
 	Put(config *domain.ScheduleConfiguration) error

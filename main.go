@@ -11,11 +11,11 @@ import (
 
 	"github.com/joho/godotenv"
 
+	amznads "github.com/LittleAksMax/amazon-ads-api-sdk-go"
 	"github.com/LittleAksMax/bids-service/internal/handler"
 	"github.com/LittleAksMax/bids-service/internal/repository"
 	"github.com/LittleAksMax/bids-service/internal/scheduler"
 	"github.com/LittleAksMax/bids-service/internal/server"
-	"github.com/LittleAksMax/bids-service/internal/service"
 )
 
 func main() {
@@ -30,24 +30,33 @@ func main() {
 	log.Printf("Running in mode: '%s'", mode)
 
 	// Load configuration
-	cfg := LoadApiConfig()
+	serverCfg := loadServerConfig()
 
-	pollInterval := 15 * time.Minute // Default poll interval
+	// SDK authentication setup
+	refreshToken := RefreshToken{}
+	adsAuthCfg := amznads.NewAmazonAuthAPIConfig(
+		os.Getenv("AMZNADS_CLIENT_ID"),
+		os.Getenv("AMZNADS_CLIENT_SECRET"),
+		"", // no redirect URI
+	)
+	amznAdsClient, err := amznads.NewAmazonAuthClient(adsAuthCfg, amznads.AmazonRegions.Europe)
+	if err != nil {
+		log.Panicf("Error initializing Amazon Ads API client: %v", err)
+	}
+
+	pollInterval := 1 * time.Hour
 
 	// Initialize dependencies (Dependency Injection)
 	configRepo := repository.NewInMemoryConfigRepository()
 
-	// Service layer
-	configService := service.NewConfigurationService(configRepo)
-
 	// Handler layer
-	configHandler := handler.NewConfigHandler(configService)
+	configHandler := handler.NewConfigHandler(configRepo)
 
 	// Server
-	httpServer := server.NewServer(cfg, configHandler)
+	httpServer := server.NewServer(serverCfg, configHandler)
 
 	// Scheduler
-	schedulerInstance := scheduler.NewScheduler(configService, pollInterval)
+	schedulerInstance := scheduler.NewScheduler()
 
 	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

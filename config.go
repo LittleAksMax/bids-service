@@ -9,7 +9,7 @@ import (
 	"github.com/LittleAksMax/bids-service/internal/server"
 )
 
-func LoadApiConfig() *server.Config {
+func loadServerConfig() *server.Config {
 	return &server.Config{
 		ApiKey: getStrFromEnv("API_KEY"),
 		Port:   readPort("API_PORT"),

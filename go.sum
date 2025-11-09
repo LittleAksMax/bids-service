@@ -1,3 +1,5 @@
+github.com/LittleAksMax/amazon-ads-api-sdk-go v0.0.0-20251109112210-f488db009f08 h1:5dR3HQq4jgOFwl4eSuGm5CHUeV7wZdxneJiivaPoHyk=
+github.com/LittleAksMax/amazon-ads-api-sdk-go v0.0.0-20251109112210-f488db009f08/go.mod h1:tqToglAGC5XzEK8/RC79e0VcBWW7sQveb6PSqKt2v4Q=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=
 github.com/go-chi/chi/v5 v5.2.3/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=

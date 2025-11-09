@@ -2,10 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
-	"github.com/LittleAksMax/bids-service/internal/service"
+	"github.com/LittleAksMax/bids-service/internal/repository"
 )
 
 // contextKey is a custom type for context keys
@@ -18,13 +17,13 @@ const (
 
 // ConfigHandler handles HTTP requests for configurations
 type ConfigHandler struct {
-	service *service.ConfigurationService
+	repo repository.ConfigurationRepository
 }
 
 // NewConfigHandler creates a new configuration handler
-func NewConfigHandler(service *service.ConfigurationService) *ConfigHandler {
+func NewConfigHandler(repo repository.ConfigurationRepository) *ConfigHandler {
 	return &ConfigHandler{
-		service: service,
+		repo: repo,
 	}
 }
 
@@ -39,11 +38,6 @@ func (h *ConfigHandler) HandleScheduleUpdate(w http.ResponseWriter, r *http.Requ
 
 	// Convert DTO to domain entity
 	config := req.ToDomain()
-
-	// TODO: Call service layer to process the configuration
-	// For now, just log it
-	log.Printf("Received valid schedule config: UserID=%s, CampaignID=%s, Marketplace=%s, Interval=%d mins, DueAt=%s",
-		config.UserID, config.CampaignID, config.Marketplace, req.Interval, config.DueAt)
 
 	// TODO: Implement actual business logic
 	// err := h.service.CreateConfiguration(config)

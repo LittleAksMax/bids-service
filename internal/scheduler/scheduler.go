@@ -5,20 +5,30 @@ import (
 	"log"
 	"time"
 
-	"github.com/LittleAksMax/bids-service/internal/service"
+	amznads "github.com/LittleAksMax/amazon-ads-api-sdk-go"
+	"github.com/LittleAksMax/bids-service/internal/repository"
 )
+
+// Config holds configuration for the scheduler
+type Config struct {
+	ScheduleConfigRepo repository.ConfigurationRepository
+	PollInterval       time.Duration
+	AdsClient          *amznads.AmazonAdsAPIClient
+}
 
 // Scheduler handles periodic polling and processing of due configurations
 type Scheduler struct {
-	service      *service.ConfigurationService
+	repo         repository.ConfigurationRepository
 	pollInterval time.Duration
+	adsClient    *amznads.AmazonAdsAPIClient
 }
 
 // NewScheduler creates a new scheduler
-func NewScheduler(service *service.ConfigurationService, pollInterval time.Duration) *Scheduler {
+func NewScheduler(cfg *Config) *Scheduler {
 	return &Scheduler{
-		service:      service,
-		pollInterval: pollInterval,
+		repo:         cfg.ScheduleConfigRepo,
+		pollInterval: cfg.PollInterval,
+		adsClient:    cfg.AdsClient,
 	}
 }
 
@@ -36,21 +46,22 @@ func (s *Scheduler) Start(ctx context.Context) {
 			log.Println("Scheduler shutting down...")
 			return
 		case <-ticker.C:
-			s.poll()
+			s.poll(ctx)
 		}
 	}
 }
 
 // poll checks for due configurations and processes them
-func (s *Scheduler) poll() {
-	log.Println("Polling for due configurations...")
-
-	// TODO: Implement polling logic
-	err := s.service.ProcessDueConfigurations()
+func (s *Scheduler) poll(ctx context.Context) {
+	due, err := s.repo.GetDue()
 	if err != nil {
 		log.Printf("Error processing due configurations: %v", err)
 		return
 	}
 
-	log.Println("Poll completed successfully")
+	err = handleDueScheduleConfigurations(ctx, due, s.adsClient)
+	if err != nil {
+		log.Printf("Error processing due configurations: %v", err)
+		return
+	}
 }

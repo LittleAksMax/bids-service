@@ -60,3 +60,58 @@ func (h *ConfigHandler) HandleScheduleUpdate(w http.ResponseWriter, r *http.Requ
 		},
 	})
 }
+
+// HandleGetByUserID handles GET requests to retrieve all configurations for a user
+func (h *ConfigHandler) HandleGetByUserID(w http.ResponseWriter, r *http.Request) {
+	// Extract userID from URL path parameter
+	userID := r.PathValue("userId")
+	if userID == "" {
+		http.Error(w, `{"error": "User ID is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	configs, found := h.repo.GetByUserID(userID)
+	if !found {
+		http.Error(w, `{"error": "No configurations found for user"}`, http.StatusNotFound)
+		return
+	}
+
+	// Return configurations
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   configs,
+	})
+}
+
+// HandleGetByUserIDAndCampaignID handles GET requests to retrieve configurations for a user and campaign
+func (h *ConfigHandler) HandleGetByUserIDAndCampaignID(w http.ResponseWriter, r *http.Request) {
+	// Extract userID and campaignID from URL path parameters
+	userID := r.PathValue("userId")
+	campaignID := r.PathValue("campaignId")
+
+	if userID == "" {
+		http.Error(w, `{"error": "User ID is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	if campaignID == "" {
+		http.Error(w, `{"error": "Campaign ID is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	configs, found := h.repo.GetByUserIDAndCampaignID(userID, campaignID)
+	if !found {
+		http.Error(w, `{"error": "No configurations found for user and campaign"}`, http.StatusNotFound)
+		return
+	}
+
+	// Return configurations
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   configs,
+	})
+}

@@ -17,19 +17,22 @@ import (
 
 // Server wraps the HTTP server
 type Server struct {
-	httpServer *http.Server
-	handler    *handler.ConfigHandler
+	httpServer   *http.Server
+	handler      *handler.ConfigHandler
+	pollInterval time.Duration
 }
 
 type Config struct {
-	ApiKey string
-	Port   int
+	ApiKey       string
+	Port         int
+	PollInterval time.Duration
 }
 
 // NewServer creates a new HTTP server
 func NewServer(cfg *Config, handler *handler.ConfigHandler) *Server {
 	srv := &Server{
-		handler: handler,
+		handler:      handler,
+		pollInterval: cfg.PollInterval,
 	}
 
 	mux := srv.routes(cfg.ApiKey)
@@ -55,7 +58,12 @@ func (s *Server) routes(apiKey string) http.Handler {
 	mux.Use(middleware.Recoverer)
 
 	// Routes - POST endpoint with validation middleware
-	mux.With(ValidateBody).With(RequireAccessKey(apiKey)).Post("/", s.handler.HandleScheduleUpdate)
+	requireAccessKeyFunc := RequireAccessKey(apiKey)
+	mux.With(ValidateBody(s.pollInterval)).With(requireAccessKeyFunc).Post("/", s.handler.HandleScheduleUpdate)
+
+	// GET endpoints with access key middleware
+	mux.With(requireAccessKeyFunc).Get("/{userId}", s.handler.HandleGetByUserID)
+	mux.With(requireAccessKeyFunc).Get("/{userId}/{campaignId}", s.handler.HandleGetByUserIDAndCampaignID)
 
 	return mux
 }

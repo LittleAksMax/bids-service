@@ -40,6 +40,27 @@ func (r *InMemoryConfigRepository) GetByUserID(userID string) ([]*domain.Schedul
 	return configs, true
 }
 
+func (r *InMemoryConfigRepository) GetByUserIDAndCampaignID(userID, campaignID string) ([]*domain.ScheduleConfiguration, bool) {
+	userConfigs, ok := r.configs[userID]
+	if !ok {
+		return nil, false
+	}
+
+	// Filter configs by campaign ID
+	filtered := make([]*domain.ScheduleConfiguration, 0)
+	for _, config := range userConfigs {
+		if config.CampaignID == campaignID {
+			filtered = append(filtered, config)
+		}
+	}
+
+	if len(filtered) == 0 {
+		return nil, false
+	}
+
+	return filtered, true
+}
+
 func (r *InMemoryConfigRepository) Put(config *domain.ScheduleConfiguration) error {
 	userConfigs := r.configs[config.UserID] // This works even if key doesn't exist (returns nil)
 

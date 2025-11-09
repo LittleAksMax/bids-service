@@ -50,6 +50,126 @@ The middleware automatically validates:
 }
 ```
 
+## GET /{userId} - Get All Configurations for a User
+
+Retrieves all schedule configurations for a specific user.
+
+### Request
+
+**Method:** `GET`  
+**URL:** `/{userId}`  
+**Headers:**
+- `X-API-Key`: Your API access key (required)
+
+### URL Parameters
+
+- `userId` (string, required): The user identifier
+
+### Response
+
+**Success (200 OK):**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "UserID": "user123",
+      "CampaignID": "campaign456",
+      "Marketplace": "US",
+      "DueAt": "2025-11-08T15:30:00Z",
+      "LastUpdated": "2025-11-08T15:00:00Z",
+      "Interval": 1800000000000
+    },
+    {
+      "UserID": "user123",
+      "CampaignID": "campaign789",
+      "Marketplace": "UK",
+      "DueAt": "2025-11-08T16:00:00Z",
+      "LastUpdated": "2025-11-08T15:30:00Z",
+      "Interval": 3600000000000
+    }
+  ]
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "error": "No configurations found for user"
+}
+```
+
+### Example
+
+```bash
+curl -X GET "http://localhost:8080/user123" \
+  -H "X-API-Key: your_api_key_here"
+```
+
+## GET /{userId}/{campaignId} - Get Configurations for User and Campaign
+
+Retrieves all schedule configurations for a specific user and campaign combination.
+
+### Request
+
+**Method:** `GET`  
+**URL:** `/{userId}/{campaignId}`  
+**Headers:**
+- `X-API-Key`: Your API access key (required)
+
+### URL Parameters
+
+- `userId` (string, required): The user identifier
+- `campaignId` (string, required): The campaign identifier
+
+### Response
+
+**Success (200 OK):**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "UserID": "user123",
+      "CampaignID": "campaign456",
+      "Marketplace": "US",
+      "DueAt": "2025-11-08T15:30:00Z",
+      "LastUpdated": "2025-11-08T15:00:00Z",
+      "Interval": 1800000000000
+    },
+    {
+      "UserID": "user123",
+      "CampaignID": "campaign456",
+      "Marketplace": "UK",
+      "DueAt": "2025-11-08T16:00:00Z",
+      "LastUpdated": "2025-11-08T15:30:00Z",
+      "Interval": 1800000000000
+    }
+  ]
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "error": "No configurations found for user and campaign"
+}
+```
+
+### Example
+
+```bash
+curl -X GET "http://localhost:8080/user123/campaign456" \
+  -H "X-API-Key: your_api_key_here"
+```
+
+## Notes
+
+- All endpoints require authentication via the `X-API-Key` header
+- The `Interval` field in responses is in nanoseconds (Go's duration format)
+- Timestamps are in UTC ISO 8601 format
+- The service stores multiple configurations per user, differentiated by campaign and marketplace
+
 Note: `dueAt` is automatically calculated by adding the interval to the current time.
 
 **Validation Error (400 Bad Request):**

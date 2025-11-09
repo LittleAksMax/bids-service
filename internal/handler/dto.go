@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/LittleAksMax/bids-service/internal/domain"
@@ -15,7 +16,7 @@ type ScheduleConfigRequest struct {
 }
 
 // Validate checks if all required fields are present and valid
-func (r *ScheduleConfigRequest) Validate() map[string]string {
+func (r *ScheduleConfigRequest) Validate(pollingInterval time.Duration) map[string]string {
 	errors := make(map[string]string)
 
 	if r.UserID == "" {
@@ -34,10 +35,9 @@ func (r *ScheduleConfigRequest) Validate() map[string]string {
 		errors["interval"] = "interval is required and must be greater than 0"
 	}
 
-	// Validate that interval is a multiple of 60 minutes
-	//if r.Interval > 0 && r.Interval%60 != 0 {
-	//	errors["interval"] = "interval must be a multiple of 60 minutes (e.g., 15, 30, 45, 60, etc.)"
-	//}
+	if r.Interval > 0 && r.Interval%int(pollingInterval.Minutes()) != 0 {
+		errors["interval"] = fmt.Sprintf("interval must be a multiple of polling interval (%d) minutes", int(pollingInterval.Minutes()))
+	}
 
 	return errors
 }

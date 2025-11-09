@@ -57,7 +57,8 @@ func main() {
 	// Handler layer
 	configHandler := handler.NewConfigHandler(configRepo)
 
-	// Server
+	// Server (with poll interval for validation)
+	serverCfg.PollInterval = pollInterval
 	httpServer := server.NewServer(serverCfg, configHandler)
 
 	// Scheduler

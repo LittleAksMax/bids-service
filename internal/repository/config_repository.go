@@ -11,6 +11,10 @@ type ConfigurationRepository interface {
 	// Returns false if no configs for given user found.
 	GetByUserID(userID string) ([]*domain.ScheduleConfiguration, bool)
 
+	// GetByUserIDAndCampaignID retrieves all configurations for a given UserID and CampaignID.
+	// Returns false if no configs found.
+	GetByUserIDAndCampaignID(userID, campaignID string) ([]*domain.ScheduleConfiguration, bool)
+
 	// Put updates a configuration or creates it if it doesn't exist
 	Put(config *domain.ScheduleConfiguration) error
 }

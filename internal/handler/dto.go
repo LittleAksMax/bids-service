@@ -29,6 +29,8 @@ func (r *ScheduleConfigRequest) Validate(pollingInterval time.Duration) map[stri
 
 	if r.Marketplace == "" {
 		errors["marketplace"] = "marketplace is required"
+	} else if !domain.IsValidMarketplace(domain.NormaliseMarketplace(r.Marketplace)) {
+		errors["marketplace"] = "marketplace is not valid (must be a valid Amazon marketplace code like US, UK, DE, etc.)"
 	}
 
 	if r.Interval <= 0 {
@@ -52,7 +54,7 @@ func (r *ScheduleConfigRequest) ToDomain() *domain.ScheduleConfiguration {
 	return &domain.ScheduleConfiguration{
 		UserID:      r.UserID,
 		CampaignID:  r.CampaignID,
-		Marketplace: r.Marketplace,
+		Marketplace: domain.NormaliseMarketplace(r.Marketplace),
 		DueAt:       dueAt,
 		LastUpdated: now,
 		Interval:    interval,

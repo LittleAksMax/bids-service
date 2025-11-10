@@ -256,6 +256,36 @@ func TestScheduleConfigRequest_Validate(t *testing.T) {
 			expectErrors: false,
 		},
 		{
+			name: "invalid request with lowercase marketplace",
+			request: ScheduleConfigRequest{
+				UserID:      "user123",
+				CampaignID:  "campaign456",
+				Marketplace: "uk",
+				Interval:    pollingIntervalMinutes,
+			},
+			expectErrors: false,
+		},
+		{
+			name: "invalid request with nonsense marketplace",
+			request: ScheduleConfigRequest{
+				UserID:      "user123",
+				CampaignID:  "campaign456",
+				Marketplace: "nonexistent-marketplace",
+				Interval:    pollingIntervalMinutes,
+			},
+			expectErrors: true,
+		},
+		{
+			name: "valid request with mixed marketplace",
+			request: ScheduleConfigRequest{
+				UserID:      "user123",
+				CampaignID:  "campaign456",
+				Marketplace: "De",
+				Interval:    pollingIntervalMinutes,
+			},
+			expectErrors: false,
+		},
+		{
 			name: "missing user ID",
 			request: ScheduleConfigRequest{
 				CampaignID:  "campaign456",
@@ -264,6 +294,17 @@ func TestScheduleConfigRequest_Validate(t *testing.T) {
 			},
 			expectErrors:  true,
 			errorContains: []string{"userId"},
+		},
+		{
+			name: "invalid marketplace code",
+			request: ScheduleConfigRequest{
+				UserID:      "user123",
+				CampaignID:  "campaign456",
+				Marketplace: "XX",
+				Interval:    pollingIntervalMinutes,
+			},
+			expectErrors:  true,
+			errorContains: []string{"marketplace"},
 		},
 		{
 			name: fmt.Sprintf("invalid interval - not multiple of %d", pollingIntervalMinutes),

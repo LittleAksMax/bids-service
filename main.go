@@ -2,107 +2,208 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
-	"sync"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	adsapi "github.com/LittleAksMax/amazon-ads-api-sdk-go"
+	"github.com/LittleAksMax/bids-service/internal/config"
+	"github.com/LittleAksMax/bids-service/internal/logging"
+	"github.com/LittleAksMax/bids-service/internal/message_queue"
+	"github.com/LittleAksMax/bids-service/internal/processors"
+	"github.com/LittleAksMax/bids-service/internal/profile_cache"
+	"github.com/LittleAksMax/bids-service/internal/receiver"
+	"github.com/LittleAksMax/bids-service/internal/services"
 	"github.com/joho/godotenv"
+)
 
-	amznads "github.com/LittleAksMax/amazon-ads-api-sdk-go"
-	"github.com/LittleAksMax/bids-service/internal/handler"
-	"github.com/LittleAksMax/bids-service/internal/repository"
-	"github.com/LittleAksMax/bids-service/internal/scheduler"
-	"github.com/LittleAksMax/bids-service/internal/server"
+const (
+	ModeDevelopment = "development"
+	ModeProduction  = "production"
 )
 
 func main() {
-	mode := os.Getenv("ENV")
-	if mode == "development" {
+	mode := os.Getenv("MODE")
+	if mode == ModeDevelopment {
 		if err := godotenv.Load(".env.Dev"); err != nil {
-			log.Panicf("Error loading .env.Dev file: %v", err)
+			log.Fatalf("error loading .env file: %v\n", err)
 		}
-	} else if mode != "production" {
-		log.Panic("ENV environment variable must be set to 'development' or 'production'")
+	} else if mode == ModeProduction {
+	} else {
+		log.Fatalf("invalid mode %s\n", mode)
 	}
-	log.Printf("Running in mode: '%s'", mode)
 
-	// Load configuration
-	serverCfg := loadServerConfig()
+	cfg := config.Load()
 
-	// SDK authentication setup
-	refreshToken := RefreshToken{}
-	adsAuthCfg := amznads.NewAmazonAuthAPIConfig(
-		os.Getenv("AMZNADS_CLIENT_ID"),
-		os.Getenv("AMZNADS_CLIENT_SECRET"),
-		"", // no redirect URI
+	// Make sure logging directory exists
+	if err := os.MkdirAll(cfg.WorkersConfig.LogPath, 0o755); err != nil {
+		log.Fatalf("error creating log directory: %v\n", err)
+	}
+
+	// Create context with SIGTERM signal available for graceful shutdown in case of interrupt
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	if err := run(ctx, cancel, cfg); err != nil {
+		log.Fatalf("%v", err)
+	}
+}
+
+func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) error {
+	workers := make([]*processors.Processor, 0, cfg.WorkersConfig.NumProcessors)
+	var pollingReceiver *receiver.Receiver
+
+	// Make internal service clients
+	userServiceClient, err := newUserServiceClient(cfg)
+	if err != nil {
+		return err
+	}
+	policyServiceClient, err := newPolicyServiceClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	profileCache, err := profile_cache.NewProfileCache(ctx, userServiceClient)
+	if err != nil {
+		return fmt.Errorf("error creating profile cache: %v", err)
+	}
+
+	// Graceful shutdown function
+	defer func() {
+		log.Print("Shutting down, cancelling context")
+		cancel()
+		<-ctx.Done()
+
+		if pollingReceiver != nil {
+			log.Print("Shutting down polling receiver")
+			pollingReceiver.Interrupt()
+			pollingReceiver.Wait()
+		}
+		log.Print("Shutting down processors")
+		processors.InterruptAll(workers)
+		processors.WaitAll(workers)
+		log.Print("Shutting down profile cache")
+		_ = profileCache.Close()
+		log.Print("Closing user service")
+		userServiceClient.CloseIdleConnections()
+		log.Print("Closing policy service")
+		policyServiceClient.CloseIdleConnections()
+		log.Print("Shutdown finished")
+	}()
+
+	for i := 0; i < cfg.WorkersConfig.NumProcessors; i++ {
+		processorAdsClient, err := newAmazonAdsClient(cfg)
+		if err != nil {
+			return fmt.Errorf("could not create processor ads client %d: %v", i, err)
+		}
+
+		mq := message_queue.NewRabbitMQConnection(cfg.MessageQueueConfig)
+		if mq == nil {
+			return nil
+		}
+
+		processorLogFile, err := openLogFile(cfg.WorkersConfig.LogPath, fmt.Sprintf("processor-%d.log", i))
+		if err != nil {
+			_ = mq.Close()
+			return err
+		}
+
+		proc := processors.NewProcessor(
+			ctx,
+			i,
+			cfg.WorkersConfig.BufferSize,
+			processorAdsClient,
+			userServiceClient,
+			policyServiceClient,
+			mq,
+			logging.NewProcessorLogger(i, os.Stdout, processorLogFile),
+		)
+		if proc == nil {
+			_ = processorLogFile.Close()
+			_ = mq.Close()
+			return fmt.Errorf("could not create all workers: created %d of %d", len(workers), cfg.WorkersConfig.NumProcessors)
+		}
+		workers = append(workers, proc)
+	}
+
+	receiverAdsClient, err := newAmazonAdsClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	receiverLogFile, err := openLogFile(cfg.WorkersConfig.LogPath, "receiver.log")
+	if err != nil {
+		return err
+	}
+
+	pollingReceiver = receiver.NewReceiver(
+		ctx,
+		userServiceClient,
+		receiverAdsClient,
+		workers,
+		profileCache,
+		logging.NewReceiverLogger(os.Stdout, receiverLogFile),
 	)
-	amznAuthClient, err := amznads.NewAmazonAuthClient(adsAuthCfg, amznads.AmazonRegions.Europe)
-	if err != nil {
-		log.Panicf("Error initializing Amazon Auth API client: %v", err)
+	if pollingReceiver == nil {
+		_ = receiverLogFile.Close()
+		return fmt.Errorf("could not create receiver: %v", err)
 	}
-	amznAdsClient, err := amznads.NewAmazonAdsAPIClient(amznAuthClient, amznads.AmazonRegions.Europe)
+
+	<-ctx.Done()
+
+	return nil
+}
+
+func newAmazonAdsClient(cfg *config.Config) (*adsapi.AmazonAdsAPIClient, error) {
+	authConfig := adsapi.NewAmazonAuthAPIConfig(cfg.AmazonAdsConfig.ClientID, cfg.AmazonAdsConfig.ClientSecret, "")
+	authClient, err := adsapi.NewAmazonAuthClient(authConfig, adsapi.AmazonRegions.Europe)
 	if err != nil {
-		log.Panicf("Error initializing Amazon Ads API client: %v", err)
+		return nil, fmt.Errorf("error initialising auth client: %v", err)
 	}
-	// TODO: maybe we should implement a provider that refetches when expired
-	amznAdsClient.SetRefreshToken(refreshToken.Get())
-	pollInterval := 1 * time.Hour
 
-	// Initialize dependencies (Dependency Injection)
-	configRepo := repository.NewInMemoryConfigRepository()
-
-	// Handler layer
-	configHandler := handler.NewConfigHandler(configRepo)
-
-	// Server (with poll interval for validation)
-	serverCfg.PollInterval = pollInterval
-	httpServer := server.NewServer(serverCfg, configHandler)
-
-	// Scheduler
-	schedulerInstance := scheduler.NewScheduler(&scheduler.Config{
-		ScheduleConfigRepo: configRepo,
-		PollInterval:       pollInterval,
-		AdsClient:          amznAdsClient,
+	client, err := adsapi.NewAmazonAdsAPIClient(&adsapi.Configuration{
+		AuthClient: authClient,
+		Region:     adsapi.AmazonRegions.Europe,
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	// Context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	return client, nil
+}
 
-	// Wait group for goroutines
-	var wg sync.WaitGroup
+func newUserServiceClient(cfg *config.Config) (*services.UserServiceClient, error) {
+	client, err := services.NewUserServiceClient(
+		&http.Client{Timeout: 15 * time.Second},
+		cfg.UserServiceConfig,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not create user service client: %v", err)
+	}
 
-	// Start HTTP server in goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := httpServer.Start(ctx); err != nil {
-			log.Printf("HTTP server error: %v", err)
-		}
-	}()
+	return client, nil
+}
 
-	// Start scheduler in goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		schedulerInstance.Start(ctx)
-	}()
+func newPolicyServiceClient(cfg *config.Config) (*services.PolicyServiceClient, error) {
+	client, err := services.NewPolicyServiceClient(
+		&http.Client{Timeout: 15 * time.Second},
+		cfg.PolicyServiceConfig,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not create user service client: %v", err)
+	}
 
-	// Wait for interrupt signal for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	return client, nil
+}
 
-	<-sigChan
-	log.Println("Received shutdown signal, initiating graceful shutdown...")
+func openLogFile(dir, name string) (*os.File, error) {
+	file, err := os.OpenFile(filepath.Join(dir, name), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("could not open log file %s: %v", name, err)
+	}
 
-	// Cancel context to signal all goroutines to stop
-	cancel()
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	log.Println("Application shutdown complete")
+	return file, nil
 }

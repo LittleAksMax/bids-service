@@ -7,15 +7,11 @@ import (
 	"strings"
 	"time"
 
-	adsapimodels "github.com/LittleAksMax/amazon-ads-api-sdk-go/models"
 	"github.com/LittleAksMax/bids-service/internal/processors"
-	"github.com/LittleAksMax/bids-service/internal/retries"
 	"github.com/LittleAksMax/bids-service/internal/services"
+	"github.com/LittleAksMax/bids-util/retries"
 	"github.com/google/uuid"
 )
-
-const cancelReportAttempts = 3
-const cancelReportRetryBackoffTime = time.Second * 2
 
 const getTokensAttempts = 3
 const getTokensBackoffTime = time.Second * 2
@@ -83,55 +79,25 @@ func (r *Receiver) handleSchedule(ctx context.Context, schedule *services.Profil
 		}
 		return errors.New("failed to match refresh token")
 	}
+	// Set valid refresh token
 	r.adsClient.SetRefreshToken(*refreshToken)
-
-	// Use adsClient to execute the required Ads API request for this schedule
-	reportOpts := adsapimodels.NewSponsoredProductsTargetingReport(
-		fmt.Sprintf("%s-%d-%s", schedule.UserID, schedule.ProfileID, schedule.DueAt.String()),
-		time.Now().UTC().Add(-time.Duration(schedule.IntervalMinutes)*time.Minute),
-		time.Now().UTC(),
-		[]string{
-			"campaignName",
-			"campaignId",
-			"adGroupName",
-			"adGroupId",
-			"impressions",
-			"clicks",
-			"cost",
-			"sales1d",
-		},
-	)
-
-	// Request report generation
-	r.logger.Infof("Requesting report for user %s on profile %d", schedule.UserID, schedule.ProfileID)
-	report, err := r.adsClient.ReportsService.RequestReport(ctx, schedule.ProfileID, reportOpts)
-	if err != nil {
-		r.logger.Errorf("Failed to request report for user %s on profile %d: %v", schedule.UserID, schedule.ProfileID, err)
-		_, _ = r.userService.Log(ctx, userID, schedule.ProfileID, "Failed to request report from Amazon")
-		return err
-	}
 
 	// Try to set processing on schedule to signal back to users
 	r.logger.Infof("Setting schedule to processing state")
 	if err = r.userService.SetProcessing(ctx, userID, schedule.ProfileID); err != nil {
-		r.logger.Errorf("Failed to mark profile %d as processing: %v. Cancelling report %s.", schedule.ProfileID, err, report.ReportID())
-		reportCancelErr := retries.Retry(cancelReportAttempts, cancelReportRetryBackoffTime, r.logger, func(ctx context.Context) error {
-			return r.adsClient.ReportsService.CancelReport(ctx, schedule.ProfileID, report.ReportID())
-		})(ctx)
-		if reportCancelErr != nil {
-			_, _ = r.userService.Log(ctx, userID, schedule.ProfileID, "Failed to cancel report")
-			r.logger.Errorf("Failed to cancel report %s on for user %s profile %d: %v.", report.ReportID(), schedule.UserID, schedule.ProfileID, err)
-		}
-		return errors.Join(err, reportCancelErr)
+		r.logger.Errorf("Failed to mark profile %d as processing: %v", schedule.ProfileID, err)
+		return err
 	}
 
 	workerIdx := schedule.ProfileID % int64(len(r.workers))
-	r.logger.Infof("Dispatching report for user %s on profile %d to Processor %d", schedule.UserID, schedule.ProfileID, workerIdx)
-	_, _ = r.userService.Log(ctx, userID, schedule.ProfileID, fmt.Sprintf("Dispatching report (Seller: %s; Profile Marketplace: %s)", profile.AccountName, profile.CountryCode))
+	r.logger.Infof("Dispatching job for user %s on profile %d to Processor %d", schedule.UserID, schedule.ProfileID, workerIdx)
+	_, _ = r.userService.Log(ctx, userID, schedule.ProfileID, "Dispatching job to process")
 	r.workers[workerIdx].Notify(processors.ProcessMessage{
-		UserID:  userID,
-		Profile: *profile,
-		Report:  report,
+		UserID:          userID,
+		Profile:         *profile,
+		RefreshToken:    *refreshToken,
+		DueAt:           schedule.DueAt,
+		IntervalMinutes: schedule.IntervalMinutes,
 	})
 
 	return nil

@@ -6,15 +6,19 @@ import (
 	"time"
 
 	adsapimodels "github.com/LittleAksMax/amazon-ads-api-sdk-go/models"
-	"github.com/LittleAksMax/bids-service/internal/retries"
 	"github.com/LittleAksMax/bids-service/internal/services"
+	"github.com/LittleAksMax/bids-util/retries"
 	"github.com/google/uuid"
 )
 
 type preparedProfileData struct {
-	attachedByPolicyID map[string][]services.AttachedPolicy
-	policiesByID       map[string]services.Policy
-	adGroupPolicies    []adGroupPolicyBinding
+	adGroupsByID map[string]preparedAdGroup
+	// Deprecated: prefer adGroupsByID for ad-group keyed evaluation.
+	// attachedByPolicyID map[string][]services.AttachedPolicy
+	// Deprecated: prefer adGroupsByID for ad-group keyed evaluation.
+	// policiesByID map[string]services.Policy
+	// Deprecated: prefer adGroupsByID for ad-group keyed evaluation.
+	// adGroupPolicies []adGroupPolicyBinding
 }
 
 type preparationResult struct {
@@ -22,10 +26,17 @@ type preparationResult struct {
 	err          error
 }
 
-type adGroupPolicyBinding struct {
+type preparedAdGroup struct {
 	adGroup adsapimodels.AdGroup
-	policy  services.Policy
+	policy  *services.Policy
+	isLive  bool
 }
+
+// Deprecated: prefer preparedAdGroup and preparedProfileData.adGroupsByID.
+//type adGroupPolicyBinding struct {
+//	adGroup adsapimodels.AdGroup
+//	policy  services.Policy
+//}
 
 func (p *Processor) runPreparationWorker(ctx context.Context, cancel context.CancelCauseFunc, userID uuid.UUID, profile *services.RegionProfile, out chan<- preparationResult) {
 	preparedData, err := p.prepareProfileData(ctx, userID, profile)
@@ -47,48 +58,56 @@ func (p *Processor) prepareProfileData(ctx context.Context, userID uuid.UUID, pr
 		return nil, fmt.Errorf("fetch attached policies: %w", err)
 	}
 
-	p.logger.Infof("Grouping attached policies by ID for user %s on profile %d", userID.String(), profile.ProfileID)
-	attachedByPolicyID := groupAttachedPoliciesByPolicyID(attachedPolicies)
+	// Deprecated: ad-group keyed evaluation no longer needs policy-keyed groupings.
+	// p.logger.Infof("Grouping attached policies by ID for user %s on profile %d", userID.String(), profile.ProfileID)
+	// attachedByPolicyID := groupAttachedPoliciesByPolicyID(attachedPolicies)
 
 	// No policies in this profile (for some reason), so leave early with no error
 	if len(attachedPolicies) == 0 {
 		p.logger.Infof("No attached policies in profile, skipping")
 		return &preparedProfileData{
-			attachedByPolicyID: attachedByPolicyID,
-			policiesByID:       map[string]services.Policy{},
-			adGroupPolicies:    nil,
+			adGroupsByID: map[string]preparedAdGroup{},
+			// attachedByPolicyID: attachedByPolicyID,
+			// policiesByID:       map[string]services.Policy{},
+			// adGroupPolicies:    nil,
 		}, nil
 	}
 
 	// Get all policies related to profile from policy service
 	p.logger.Infof("Fetching all policies for user %s on profile %d", userID.String(), profile.ProfileID)
-	policies, err := p.fetchPoliciesForProfile(ctx, profile.CountryCode)
+	policies, err := p.fetchPoliciesForProfile(ctx, userID, profile.CountryCode)
 	if err != nil {
 		return nil, fmt.Errorf("fetch policies: %v", err)
 	}
 
-	// Attach found policy objects to attached policy IDs from user-service
-	p.logger.Infof("Building lookup table for attached policies for user %s on profile %d", userID.String(), profile.ProfileID)
-	policiesByID := p.buildAttachedPolicyLookup(attachedByPolicyID, policies)
+	// Deprecated: ad-group keyed evaluation no longer needs policy-keyed lookups.
+	// p.logger.Infof("Building lookup table for attached policies for user %s on profile %d", userID.String(), profile.ProfileID)
+	// policiesByID := p.buildAttachedPolicyLookup(attachedByPolicyID, policies)
 
 	// Now, we pair the adgroups with the fetched policies
 	p.logger.Infof("Fetching AdGroups for attached policies for user %s on profile %d", userID.String(), profile.ProfileID)
-	adGroupsByID, err := p.fetchAdGroupsForAttachedPolicies(ctx, profile.ProfileID, attachedPolicies)
+	fetchedAdGroupsByID, err := p.fetchAdGroupsForAttachedPolicies(ctx, profile.ProfileID, attachedPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("fetch ad groups: %v", err)
 	}
 
-	// Join the adgroups to the attached policies
-	p.logger.Infof("Joining fetched ad groups to attached policy objects for user %s on profile %d", userID.String(), profile.ProfileID)
-	adGroupPolicies, err := p.buildAdGroupPolicyBindings(attachedPolicies, adGroupsByID, policiesByID)
-	if err != nil {
-		return nil, err
-	}
+	p.logger.Infof("Building Ad Group lookup for user %s on profile %d", userID.String(), profile.ProfileID)
+	preparedAdGroupsByID := p.buildPreparedAdGroupLookup(attachedPolicies, fetchedAdGroupsByID, policies)
+
+	// Deprecated: ad-group keyed evaluation no longer needs flat ad-group/policy bindings.
+	// p.logger.Infof("Joining fetched ad groups to attached policy objects for user %s on profile %d", userID.String(), profile.ProfileID)
+	// adGroupPolicies, err := p.buildAdGroupPolicyBindings(attachedPolicies, fetchedAdGroupsByID, policiesByID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	_, _ = p.userService.Log(ctx, userID, profile.ProfileID, "Fetched Ad Groups and attached policies")
 
 	return &preparedProfileData{
-		attachedByPolicyID: attachedByPolicyID,
-		policiesByID:       policiesByID,
-		adGroupPolicies:    adGroupPolicies,
+		adGroupsByID: preparedAdGroupsByID,
+		// attachedByPolicyID: attachedByPolicyID,
+		// policiesByID:       policiesByID,
+		// adGroupPolicies:    adGroupPolicies,
 	}, nil
 }
 
@@ -123,7 +142,7 @@ func (p *Processor) fetchAttachedPolicies(ctx context.Context, userID uuid.UUID,
 const getProfilePoliciesMaxAttempts = 3
 const getProfilePoliciesBackoffTime = time.Second * 2
 
-func (p *Processor) fetchPoliciesForProfile(ctx context.Context, marketplace string) ([]services.Policy, error) {
+func (p *Processor) fetchPoliciesForProfile(ctx context.Context, userID uuid.UUID, marketplace string) ([]services.Policy, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -134,7 +153,7 @@ func (p *Processor) fetchPoliciesForProfile(ctx context.Context, marketplace str
 	// In this case, Marketplace and Profile are the same
 	var policies []services.Policy
 	err := retries.Retry(getProfilePoliciesMaxAttempts, getProfilePoliciesBackoffTime, p.logger, func(ctx context.Context) error {
-		fetchedPolicies, err := p.policyService.GetPoliciesForMarketplace(ctx, marketplace)
+		fetchedPolicies, err := p.policyService.GetPoliciesForMarketplace(ctx, userID, marketplace)
 		if err != nil {
 			return err
 		}
@@ -195,57 +214,98 @@ func (p *Processor) fetchAdGroupsForAttachedPolicies(ctx context.Context, profil
 	return adGroupsByID, nil
 }
 
-// groupAttachedPoliciesByPolicyID creates a map from the attached policies to make it easier to search
-// by policy ID
-func groupAttachedPoliciesByPolicyID(attachedPolicies []services.AttachedPolicy) map[string][]services.AttachedPolicy {
-	grouped := make(map[string][]services.AttachedPolicy)
-	for _, attachedPolicy := range attachedPolicies {
-		grouped[attachedPolicy.PolicyID] = append(grouped[attachedPolicy.PolicyID], attachedPolicy)
-	}
-
-	return grouped
-}
-
-func (p *Processor) buildAttachedPolicyLookup(attachedByPolicyID map[string][]services.AttachedPolicy, policies []services.Policy) map[string]services.Policy {
-	policiesByID := make(map[string]services.Policy, len(attachedByPolicyID))
+func (p *Processor) buildPreparedAdGroupLookup(attachedPolicies []services.AttachedPolicy, adGroupsByID map[string]adsapimodels.AdGroup, policies []services.Policy) map[string]preparedAdGroup {
+	policiesByID := make(map[string]services.Policy, len(policies))
 	for _, policy := range policies {
-		if _, needed := attachedByPolicyID[policy.ID]; needed {
-			policiesByID[policy.ID] = policy
-		}
+		policiesByID[policy.ID] = policy
 	}
 
-	// Check which policies were not found
-	for policyID := range attachedByPolicyID {
-		if _, ok := policiesByID[policyID]; !ok {
-			p.logger.Warnf("attached policy %s was not returned by the policy service, skipping it", policyID)
-		}
-	}
-
-	return policiesByID
-}
-
-func (p *Processor) buildAdGroupPolicyBindings(attachedPolicies []services.AttachedPolicy, adGroupsByID map[string]adsapimodels.AdGroup, policiesByID map[string]services.Policy) ([]adGroupPolicyBinding, error) {
-	bindings := make([]adGroupPolicyBinding, 0, len(attachedPolicies))
+	preparedAdGroupsByID := make(map[string]preparedAdGroup, len(adGroupsByID))
 	for _, attachedPolicy := range attachedPolicies {
 		adGroup, ok := adGroupsByID[attachedPolicy.AdGroupID]
-
-		// Ignore adgroups with no attached policy
 		if !ok {
 			continue
+		}
+
+		if _, exists := preparedAdGroupsByID[attachedPolicy.AdGroupID]; exists {
+			p.logger.Warnf("Ad Group %s has multiple attached policies, keeping the first one", attachedPolicy.AdGroupID)
+			continue
+		}
+
+		entry := preparedAdGroup{
+			adGroup: adGroup,
+			isLive:  attachedPolicy.IsLive,
 		}
 
 		policy, ok := policiesByID[attachedPolicy.PolicyID]
-
-		// If attached policy not found, skip
 		if !ok {
+			p.logger.Warnf("Attached policy %s was not returned by the policy service, skipping it", attachedPolicy.PolicyID)
+			preparedAdGroupsByID[attachedPolicy.AdGroupID] = entry
 			continue
 		}
 
-		bindings = append(bindings, adGroupPolicyBinding{
-			adGroup: adGroup,
-			policy:  policy,
-		})
+		policyCopy := policy
+		entry.policy = &policyCopy
+		preparedAdGroupsByID[attachedPolicy.AdGroupID] = entry
 	}
 
-	return bindings, nil
+	return preparedAdGroupsByID
 }
+
+// groupAttachedPoliciesByPolicyID creates a map from the attached policies to make it easier to search
+// by policy ID
+// Deprecated: prefer buildPreparedAdGroupLookup and preparedProfileData.adGroupsByID.
+//func groupAttachedPoliciesByPolicyID(attachedPolicies []services.AttachedPolicy) map[string][]services.AttachedPolicy {
+//	grouped := make(map[string][]services.AttachedPolicy)
+//	for _, attachedPolicy := range attachedPolicies {
+//		grouped[attachedPolicy.PolicyID] = append(grouped[attachedPolicy.PolicyID], attachedPolicy)
+//	}
+//
+//	return grouped
+//}
+
+// Deprecated: prefer buildPreparedAdGroupLookup and preparedProfileData.adGroupsByID.
+//func (p *Processor) buildAttachedPolicyLookup(attachedByPolicyID map[string][]services.AttachedPolicy, policies []services.Policy) map[string]services.Policy {
+//	policiesByID := make(map[string]services.Policy, len(attachedByPolicyID))
+//	for _, policy := range policies {
+//		if _, needed := attachedByPolicyID[policy.ID]; needed {
+//			policiesByID[policy.ID] = policy
+//		}
+//	}
+//
+//	// Check which policies were not found
+//	for policyID := range attachedByPolicyID {
+//		if _, ok := policiesByID[policyID]; !ok {
+//			p.logger.Warnf("attached policy %s was not returned by the policy service, skipping it", policyID)
+//		}
+//	}
+//
+//	return policiesByID
+//}
+
+// Deprecated: prefer buildPreparedAdGroupLookup and preparedProfileData.adGroupsByID.
+//func (p *Processor) buildAdGroupPolicyBindings(attachedPolicies []services.AttachedPolicy, adGroupsByID map[string]adsapimodels.AdGroup, policiesByID map[string]services.Policy) ([]adGroupPolicyBinding, error) {
+//	bindings := make([]adGroupPolicyBinding, 0, len(attachedPolicies))
+//	for _, attachedPolicy := range attachedPolicies {
+//		adGroup, ok := adGroupsByID[attachedPolicy.AdGroupID]
+//
+//		// Ignore adgroups with no attached policy
+//		if !ok {
+//			continue
+//		}
+//
+//		policy, ok := policiesByID[attachedPolicy.PolicyID]
+//
+//		// If attached policy not found, skip
+//		if !ok {
+//			continue
+//		}
+//
+//		bindings = append(bindings, adGroupPolicyBinding{
+//			adGroup: adGroup,
+//			policy:  policy,
+//		})
+//	}
+//
+//	return bindings, nil
+//}

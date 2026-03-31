@@ -1,9 +1,13 @@
+github.com/LittleAksMax/bids-service-clients v0.0.0-20260330192621-39a69bf71196 h1:urhZtt0rjya6+3Rf7VwhjU5EQ6/O2EJ7AiksykVPU7I=
+github.com/LittleAksMax/bids-service-clients v0.0.0-20260330192621-39a69bf71196/go.mod h1:l6fZxmHt+/hFtfP34n84XTitiSgEbvkYeuSosjwVkGU=
 github.com/LittleAksMax/bids-util v0.0.5 h1:ptJzoYPNTF+X8rWA3doMSckFTM/NBwCkx6jv2LXxf6I=
 github.com/LittleAksMax/bids-util v0.0.5/go.mod h1:SrRKuc2Eoe7eyca7OPkM7ZufeRFpYkxos8B6nix17Qk=
 github.com/LittleAksMax/bids-util v0.0.6-0.20260325145548-ce2ed8e49d4c h1:GgPVqchfXDWSnf+tiy2jqfbOijEPkCpWKDSnwiSXASY=
 github.com/LittleAksMax/bids-util v0.0.6-0.20260325145548-ce2ed8e49d4c/go.mod h1:8Hup3ATpBOUX8de/nALAVS/DgovuZJfgbzFmR2Ic6YI=
 github.com/LittleAksMax/bidscript v0.0.0-20260326213106-da8fa7158626 h1:1wQktF+wufuRE9CjEAZ2axQGxCVlCMY/Q2dvruftahY=
 github.com/LittleAksMax/bidscript v0.0.0-20260326213106-da8fa7158626/go.mod h1:+30EBk3CWed5StQb8Z6vT+Z+v/GJLTjAVPpNLiJLCU8=
+github.com/LittleAksMax/bidscript v0.0.0-20260329160519-59e27fdefbc9 h1:ibH//sjhbE7bdwwr44EgbmjQ7NmX/ZcD7XCgU1OHCds=
+github.com/LittleAksMax/bidscript v0.0.0-20260329160519-59e27fdefbc9/go.mod h1:+30EBk3CWed5StQb8Z6vT+Z+v/GJLTjAVPpNLiJLCU8=
 github.com/allegro/bigcache/v3 v3.1.0 h1:H2Vp8VOvxcrB91o86fUSVJFqeuz8kpyyB02eH3bSzwk=
 github.com/allegro/bigcache/v3 v3.1.0/go.mod h1:aPyh7jEvrog9zAwx5N7+JUQX5dZTSGpxF1LAR4dr35I=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

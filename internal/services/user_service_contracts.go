@@ -12,7 +12,7 @@ const (
 	StatePending    ScheduleState = "PENDING"
 	StateFailed     ScheduleState = "FAILED"
 	StateProcessing ScheduleState = "PROCESSING"
-	StateErrors     ScheduleState = "ERRORS"
+	StateErrors     ScheduleState = "SOME ERRORS"
 )
 
 type processProfilePolicyScheduleRequest struct {
@@ -63,6 +63,19 @@ type CreatedUserLogResponse struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// BidResponse represents a bid in responses
+type BidResponse struct {
+	UserID     uuid.UUID `json:"user_id"`
+	ProfileID  int64     `json:"profile_id"`
+	CampaignID string    `json:"campaign_id"`
+	AdGroupID  string    `json:"adgroup_id"`
+	PolicyID   string    `json:"policy_id"`
+	FromBid    float64   `json:"from_bid"`
+	ToBid      float64   `json:"to_bid"`
+	ChangeDate time.Time `json:"change_date"`
+	IsLive     bool      `json:"is_live"`
+}
+
 type UserTokensResponse struct {
 	UserID         uuid.UUID `json:"user_id"`
 	RefreshTokenEU *string   `json:"refresh_token_eu"`
@@ -72,4 +85,16 @@ type UserTokensResponse struct {
 
 type createUserLogRequest struct {
 	Log string `json:"Log"`
+}
+
+// CreateBidRequest represents a request to create a bid
+type CreateBidRequest struct {
+	UserID     string  `json:"user_id"`
+	ProfileID  int64   `json:"profile_id"`
+	CampaignID string  `json:"campaign_id"`
+	AdGroupID  string  `json:"adgroup_id"`
+	PolicyID   string  `json:"policy_id"`
+	FromBid    float64 `json:"from_bid"`
+	ToBid      float64 `json:"to_bid"`
+	IsLive     bool    `json:"is_live"`
 }

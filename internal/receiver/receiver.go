@@ -3,13 +3,14 @@ package receiver
 import (
 	"context"
 	"errors"
+	"io"
 	"time"
 
 	adsapi "github.com/LittleAksMax/amazon-ads-api-sdk-go"
-	"github.com/LittleAksMax/bids-service/internal/logging"
 	"github.com/LittleAksMax/bids-service/internal/processors"
 	"github.com/LittleAksMax/bids-service/internal/profile_cache"
 	"github.com/LittleAksMax/bids-service/internal/services"
+	"github.com/LittleAksMax/bids-util/logging"
 )
 
 type Receiver struct {
@@ -34,7 +35,7 @@ func NewReceiver(parent context.Context, userService *services.UserServiceClient
 		userService:  userService,
 		adsClient:    adsClient,
 		workers:      workers,
-		pollInterval: time.Second * 5, // TODO: Change back to time.Minute
+		pollInterval: time.Second * 5, // TODO: change back to a time.Minute
 		profileCache: profileCache,
 		logger:       logger,
 		cancel:       cancel,
@@ -84,4 +85,8 @@ func (r *Receiver) pollOnce(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func NewReceiverLogger(writers ...io.Writer) *logging.Logger {
+	return logging.NewLogger("[Receiver]", writers...)
 }

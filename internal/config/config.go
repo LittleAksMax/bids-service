@@ -1,7 +1,6 @@
 package config
 
 import (
-	mq "github.com/LittleAksMax/bids-service/internal/message_queue"
 	"github.com/LittleAksMax/bids-service/internal/services"
 	"github.com/LittleAksMax/bids-util/env"
 )
@@ -18,7 +17,6 @@ type WorkersConfig struct {
 }
 
 type Config struct {
-	MessageQueueConfig  *mq.Config
 	AmazonAdsConfig     *AmazonAdsConfig
 	WorkersConfig       *WorkersConfig
 	UserServiceConfig   *services.ServiceConfig
@@ -29,13 +27,6 @@ type Config struct {
 // Required PORT, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, VALIDATION_API_KEY, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
 func Load() *Config {
 	return &Config{
-		MessageQueueConfig: &mq.Config{
-			Host:     env.GetStrFromEnv("RABBITMQ_HOST"),
-			Port:     env.ReadPort("RABBITMQ_PORT"),
-			User:     env.GetStrFromEnv("RABBITMQ_USER"),
-			Password: env.GetStrFromEnv("RABBITMQ_PASSWORD"),
-			Queue:    env.GetStrFromEnv("RABBITMQ_QUEUE"),
-		},
 		AmazonAdsConfig: &AmazonAdsConfig{
 			ClientID:     env.GetStrFromEnv("AMAZON_ADS_CLIENT_ID"),
 			ClientSecret: env.GetStrFromEnv("AMAZON_ADS_CLIENT_SECRET"),

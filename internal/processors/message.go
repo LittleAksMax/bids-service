@@ -1,13 +1,16 @@
 package processors
 
 import (
-	adsapi "github.com/LittleAksMax/amazon-ads-api-sdk-go"
+	"time"
+
 	"github.com/LittleAksMax/bids-service/internal/services"
 	"github.com/google/uuid"
 )
 
 type ProcessMessage struct {
-	UserID  uuid.UUID
-	Profile services.RegionProfile
-	Report  *adsapi.Report
+	UserID          uuid.UUID
+	Profile         services.RegionProfile
+	RefreshToken    string
+	DueAt           time.Time
+	IntervalMinutes int64
 }

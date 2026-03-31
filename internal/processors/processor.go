@@ -2,18 +2,17 @@ package processors
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	adsapi "github.com/LittleAksMax/amazon-ads-api-sdk-go"
-	"github.com/LittleAksMax/bids-service/internal/logging"
-	"github.com/LittleAksMax/bids-service/internal/message_queue"
 	"github.com/LittleAksMax/bids-service/internal/services"
+	"github.com/LittleAksMax/bids-util/logging"
 )
 
 type Processor struct {
 	ID       int
 	messages chan ProcessMessage
-
-	messageQueue message_queue.MessageQueue
 
 	adsClient     *adsapi.AmazonAdsAPIClient
 	userService   *services.UserServiceClient
@@ -24,7 +23,7 @@ type Processor struct {
 	done   chan struct{}
 }
 
-func NewProcessor(parent context.Context, procID, bufferSize int, adsClient *adsapi.AmazonAdsAPIClient, userService *services.UserServiceClient, policyService *services.PolicyServiceClient, mq message_queue.MessageQueue, logger *logging.Logger) *Processor {
+func NewProcessor(parent context.Context, procID, bufferSize int, adsClient *adsapi.AmazonAdsAPIClient, userService *services.UserServiceClient, policyService *services.PolicyServiceClient, logger *logging.Logger) *Processor {
 	if logger == nil {
 		return nil
 	}
@@ -34,7 +33,6 @@ func NewProcessor(parent context.Context, procID, bufferSize int, adsClient *ads
 	processor := &Processor{
 		ID:            procID,
 		messages:      make(chan ProcessMessage, bufferSize),
-		messageQueue:  mq,
 		adsClient:     adsClient,
 		userService:   userService,
 		policyService: policyService,
@@ -74,4 +72,8 @@ func (p *Processor) run(ctx context.Context) {
 			p.handleMessage(ctx, message)
 		}
 	}
+}
+
+func NewProcessorLogger(id int, writers ...io.Writer) *logging.Logger {
+	return logging.NewLogger(fmt.Sprintf("[Processor %d]", id), writers...)
 }

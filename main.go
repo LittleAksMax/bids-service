@@ -13,8 +13,6 @@ import (
 
 	adsapi "github.com/LittleAksMax/amazon-ads-api-sdk-go"
 	"github.com/LittleAksMax/bids-service/internal/config"
-	"github.com/LittleAksMax/bids-service/internal/logging"
-	"github.com/LittleAksMax/bids-service/internal/message_queue"
 	"github.com/LittleAksMax/bids-service/internal/processors"
 	"github.com/LittleAksMax/bids-service/internal/profile_cache"
 	"github.com/LittleAksMax/bids-service/internal/receiver"
@@ -100,14 +98,8 @@ func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) err
 			return fmt.Errorf("could not create processor ads client %d: %v", i, err)
 		}
 
-		mq := message_queue.NewRabbitMQConnection(cfg.MessageQueueConfig)
-		if mq == nil {
-			return nil
-		}
-
 		processorLogFile, err := openLogFile(cfg.WorkersConfig.LogPath, fmt.Sprintf("processor-%d.log", i))
 		if err != nil {
-			_ = mq.Close()
 			return err
 		}
 
@@ -118,12 +110,10 @@ func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) err
 			processorAdsClient,
 			userServiceClient,
 			policyServiceClient,
-			mq,
-			logging.NewProcessorLogger(i, os.Stdout, processorLogFile),
+			processors.NewProcessorLogger(i, os.Stdout, processorLogFile),
 		)
 		if proc == nil {
 			_ = processorLogFile.Close()
-			_ = mq.Close()
 			return fmt.Errorf("could not create all workers: created %d of %d", len(workers), cfg.WorkersConfig.NumProcessors)
 		}
 		workers = append(workers, proc)
@@ -145,7 +135,7 @@ func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) err
 		receiverAdsClient,
 		workers,
 		profileCache,
-		logging.NewReceiverLogger(os.Stdout, receiverLogFile),
+		receiver.NewReceiverLogger(os.Stdout, receiverLogFile),
 	)
 	if pollingReceiver == nil {
 		_ = receiverLogFile.Close()

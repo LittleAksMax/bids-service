@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PolicyServiceClient struct {
@@ -26,7 +28,7 @@ func NewPolicyServiceClient(httpClient *http.Client, cfg *ServiceConfig) (*Polic
 	}, nil
 }
 
-func (c *PolicyServiceClient) GetPoliciesForMarketplace(ctx context.Context, marketplace string) ([]Policy, error) {
+func (c *PolicyServiceClient) GetPoliciesForMarketplace(ctx context.Context, userID uuid.UUID, marketplace string) ([]Policy, error) {
 	return executeServiceRequest[[]Policy](ctx, &c.serviceClient, serviceRequest{
 		method: http.MethodGet,
 		path:   "/internal/policies/policies", // I realise the unfortunate path
@@ -34,7 +36,8 @@ func (c *PolicyServiceClient) GetPoliciesForMarketplace(ctx context.Context, mar
 			"marketplace": []string{marketplace},
 		},
 		headers: map[string]string{
-			serviceUserIDHeader: c.apiKey,
+			c.apiKeyHeader:      c.apiKey,
+			serviceUserIDHeader: userID.String(),
 		},
 	})
 }

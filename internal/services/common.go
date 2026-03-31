@@ -82,7 +82,7 @@ func executeServiceRequest[T any](ctx context.Context, client *serviceClient, re
 	}
 
 	bodyText := strings.TrimSpace(string(bodyBytes))
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		return zero, fmt.Errorf("%s %s: %s: %s", req.method, httpReq.URL.RequestURI(), res.Status, bodyText)
 	}
 	if bodyText == "" {

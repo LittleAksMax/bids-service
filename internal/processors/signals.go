@@ -3,7 +3,6 @@ package processors
 func (p *Processor) Interrupt() {
 	p.logger.Infof("Interrupted")
 
-	_ = p.messageQueue.Close()
 	p.cancel()
 }
 

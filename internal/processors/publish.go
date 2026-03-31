@@ -176,6 +176,8 @@ func (p *Processor) fetchTargetsForChange(ctx context.Context, profileID int64, 
 }
 
 func (p *Processor) updateTargetBids(ctx context.Context, profileID int64, targets []adsapimodels.Target, newBid float64) error {
+	// Fetch targets to change (there may be none to change, or they might have already changed from just
+	// setting the Ad Group's default bid)
 	updates := buildTargetBidUpdates(targets, newBid)
 	if len(updates) == 0 {
 		return nil
@@ -216,16 +218,24 @@ func (p *Processor) updateTargetBids(ctx context.Context, profileID int64, targe
 func buildTargetBidUpdates(targets []adsapimodels.Target, newBid float64) []adsapimodels.UpdateTargetOption {
 	updates := make([]adsapimodels.UpdateTargetOption, 0, len(targets))
 	for _, target := range targets {
+		// This may be true for older Ad Groups, where the different target types
+		// became available to manage for the different
 		if target.Bid == nil {
 			continue
 		}
 
+		// Only set the target to be updated if there is a difference in the bid values
+		// This is because we can't be sure that adjusting the default bid of the Ad Group
+		// automatically applies the change to targets, due to older versions of targets
+		// still being in use
 		bid := *target.Bid
-		bid.Bid = newBid
-		updates = append(updates, adsapimodels.UpdateTargetOption{
-			TargetID: target.TargetID,
-			Bid:      &bid,
-		})
+		if bid.Bid != newBid {
+			bid.Bid = newBid
+			updates = append(updates, adsapimodels.UpdateTargetOption{
+				TargetID: target.TargetID,
+				Bid:      &bid,
+			})
+		}
 	}
 
 	return updates

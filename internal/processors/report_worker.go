@@ -48,10 +48,10 @@ func (p *Processor) runReportWorker(ctx context.Context, cancel context.CancelCa
 	}
 
 	// Request report generation
-	p.logger.Infof("Requesting report for user %s on profile %d", msg.UserID, msg.Profile.ProfileID)
+	p.logger.Infof("[UserID: %s; ProfileID: %d] Requesting report", msg.UserID.String(), msg.Profile.ProfileID)
 	report, err := p.adsClient.ReportsService.RequestReport(ctx, msg.Profile.ProfileID, &reportOpts)
 	if err != nil {
-		p.logger.Errorf("Failed to request report for user %s on profile %d: %v", msg.UserID, msg.Profile.ProfileID, err)
+		p.logger.Errorf("[UserID: %s; ProfileID: %d] Failed to request report: %v", msg.UserID.String(), msg.Profile.ProfileID, err)
 		_, _ = p.userService.Log(ctx, msg.UserID, msg.Profile.ProfileID, "Failed to request report from Amazon")
 
 		// Result is the error
@@ -82,16 +82,16 @@ func (p *Processor) handleReport(ctx context.Context, userID uuid.UUID, profile 
 			return err
 		})(ctx)
 		if err != nil {
-			p.logger.Errorf("[User %s; Profile %d] Error refreshing report (with retries): %v", userID.String(), profile.ProfileID, err)
+			p.logger.Errorf("[UserID: %s; ProfileID: %d; ReportID: %s] Failed to refresh report after retries: %v", userID.String(), profile.ProfileID, report.ReportID(), err)
 			cancelErr := p.cancelReport(ctx, profile.ProfileID, report.ReportID())
 			if cancelErr != nil {
 				_, _ = p.userService.Log(ctx, userID, profile.ProfileID, "Failed to cancel report")
-				p.logger.Errorf("Failed to cancel report %s on for user %s profile %d: %v.", report.ReportID(), userID, profile.ProfileID, cancelErr)
+				p.logger.Errorf("[UserID: %s; ProfileID: %d; ReportID: %s] Failed to cancel report: %v", userID.String(), profile.ProfileID, report.ReportID(), cancelErr)
 			}
 			return nil, errors.Join(err, cancelErr)
 		}
 
-		p.logger.Infof("[User %s; Profile %d] Report status: %s", userID.String(), profile.ProfileID, details.Status)
+		p.logger.Infof("[UserID: %s; ProfileID: %d; ReportID: %s] Report status: %s", userID.String(), profile.ProfileID, report.ReportID(), details.Status)
 
 		if details.IsTerminal() {
 			break
@@ -104,11 +104,11 @@ func (p *Processor) handleReport(ctx context.Context, userID uuid.UUID, profile 
 			timer.Stop()
 
 			// We were cancelled by another goroutine, so we must cancel the report generation
-			p.logger.Infof("[User %s; Profile %d] Context cancelled, trying to cancel report generation", userID.String(), profile.ProfileID)
+			p.logger.Infof("[UserID: %s; ProfileID: %d; ReportID: %s] Context canceled, trying to cancel report generation", userID.String(), profile.ProfileID, report.ReportID())
 			err = p.cancelReport(ctx, profile.ProfileID, report.ReportID())
 			if err != nil {
 				_, _ = p.userService.Log(ctx, userID, profile.ProfileID, "Failed to cancel report")
-				p.logger.Errorf("Failed to cancel report %s on for user %s profile %d: %v.", report.ReportID(), userID, profile.ProfileID, err)
+				p.logger.Errorf("[UserID: %s; ProfileID: %d; ReportID: %s] Failed to cancel report: %v", userID.String(), profile.ProfileID, report.ReportID(), err)
 			}
 			return nil, errors.Join(ctx.Err(), err)
 		case <-timer.C:

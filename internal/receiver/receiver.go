@@ -25,7 +25,7 @@ type Receiver struct {
 	done   chan struct{}
 }
 
-func NewReceiver(parent context.Context, userService *services.UserServiceClient, adsClient *adsapi.AmazonAdsAPIClient, workers []*processors.Processor, profileCache profile_cache.ProfileCache, logger *logging.Logger) *Receiver {
+func NewReceiver(parent context.Context, userService *services.UserServiceClient, workers []*processors.Processor, profileCache profile_cache.ProfileCache, logger *logging.Logger) *Receiver {
 	if logger == nil {
 		return nil
 	}
@@ -33,9 +33,8 @@ func NewReceiver(parent context.Context, userService *services.UserServiceClient
 	ctx, cancel := context.WithCancel(parent)
 	receiver := &Receiver{
 		userService:  userService,
-		adsClient:    adsClient,
 		workers:      workers,
-		pollInterval: time.Second * 5, // TODO: change back to a time.Minute
+		pollInterval: time.Minute,
 		profileCache: profileCache,
 		logger:       logger,
 		cancel:       cancel,
@@ -68,7 +67,7 @@ func (r *Receiver) run(ctx context.Context) {
 
 func (r *Receiver) pollAndLog(ctx context.Context) {
 	if err := r.pollOnce(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		r.logger.Errorf("poll failed: %v", err)
+		r.logger.Errorf("Poll failed: %v", err)
 	}
 }
 
@@ -80,7 +79,7 @@ func (r *Receiver) pollOnce(ctx context.Context) error {
 
 	for _, schedule := range schedules {
 		if err := r.handleSchedule(ctx, &schedule); err != nil {
-			r.logger.Errorf("failed to handle profile %d: %v", schedule.ProfileID, err)
+			r.logger.Errorf("[UserID: %s; ProfileID: %d] Failed to handle schedule: %v", schedule.UserID, schedule.ProfileID, err)
 		}
 	}
 

@@ -7,10 +7,9 @@ require (
 	github.com/google/uuid v1.6.0
 )
 
-require github.com/joho/godotenv v1.5.1
-
 require (
-	github.com/LittleAksMax/amazon-ads-api-sdk-go v1.0.0 // indirect
-	github.com/LittleAksMax/bids-util v1.0.0 // indirect
-	github.com/LittleAksMax/bidscript v1.0.0 // indirect
+	github.com/LittleAksMax/amazon-ads-api-sdk-go v1.0.0
+	github.com/LittleAksMax/bids-util v1.0.0
+	github.com/LittleAksMax/bidscript v1.0.0
+	github.com/joho/godotenv v1.5.1
 )

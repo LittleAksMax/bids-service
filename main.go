@@ -119,11 +119,6 @@ func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) err
 		workers = append(workers, proc)
 	}
 
-	receiverAdsClient, err := newAmazonAdsClient(cfg)
-	if err != nil {
-		return err
-	}
-
 	receiverLogFile, err := openLogFile(cfg.WorkersConfig.LogPath, "receiver.log")
 	if err != nil {
 		return err
@@ -132,7 +127,6 @@ func run(ctx context.Context, cancel context.CancelFunc, cfg *config.Config) err
 	pollingReceiver = receiver.NewReceiver(
 		ctx,
 		userServiceClient,
-		receiverAdsClient,
 		workers,
 		profileCache,
 		receiver.NewReceiverLogger(os.Stdout, receiverLogFile),

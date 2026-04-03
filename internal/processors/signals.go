@@ -1,7 +1,7 @@
 package processors
 
 func (p *Processor) Interrupt() {
-	p.logger.Infof("Interrupted")
+	p.logger.Infof("Interrupt requested")
 
 	p.cancel()
 }

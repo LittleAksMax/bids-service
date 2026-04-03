@@ -1,10 +1,7 @@
 package receiver
 
 func (r *Receiver) Interrupt() {
-	r.logger.Infof("Interrupted")
-	if r.adsClient != nil {
-		r.adsClient.CloseIdleConnections()
-	}
+	r.logger.Infof("Interrupt requested")
 	r.cancel()
 }
 

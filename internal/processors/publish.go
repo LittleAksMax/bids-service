@@ -18,13 +18,13 @@ const changeBidMaxAttempts = 3
 const changeBidMaxBackoffTime = time.Second * 2
 
 func (p *Processor) publishChange(ctx context.Context, userID uuid.UUID, profile *services.RegionProfile, change *bidChangeResult) error {
-	p.logger.Infof("[UserID: %s; ProfileID: %d] Publishing bid change for AdGroupID: %s", userID.String(), profile.ProfileID, change.AdGroupID)
+	p.logger.Infof("[UserID: %s; ProfileID: %d; AdGroupID: %s] Publishing bid change", userID.String(), profile.ProfileID, change.AdGroupID)
 
 	adGroupName := ""
 	if change.IsLive {
 		// No point making a request if no change
 		if change.OldBid == change.NewBid {
-			p.logger.Infof("[User ID: %s; Profile %d; AdGroup %s] No change in bid value (%f). No request made.", userID.String(), change.ProfileID, change.AdGroupID, change.OldBid)
+			p.logger.Infof("[UserID: %s; ProfileID: %d; AdGroupID: %s] No bid change needed (current bid %.4f)", userID.String(), profile.ProfileID, change.AdGroupID, change.OldBid)
 			return nil
 		}
 		adGroup, err := p.fetchAdGroupForChange(ctx, profile.ProfileID, change.AdGroupID)
@@ -46,7 +46,7 @@ func (p *Processor) publishChange(ctx context.Context, userID uuid.UUID, profile
 
 		if err := p.updateTargetBids(ctx, profile.ProfileID, targets, change.NewBid); err != nil {
 			_, _ = p.userService.Log(ctx, userID, profile.ProfileID, fmt.Sprintf("Couldn't update targets for Ad Group %s", adGroup.Name))
-			p.logger.Errorf("[UserID: %s; ProfileID: %d; AdGroup: %s] Couldn't update targets", userID.String(), profile.ProfileID, change.AdGroupID)
+			p.logger.Errorf("[UserID: %s; ProfileID: %d; AdGroupID: %s] Failed to update targets", userID.String(), profile.ProfileID, change.AdGroupID)
 			return err
 		}
 	}

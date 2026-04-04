@@ -2,8 +2,8 @@ github.com/LittleAksMax/amazon-ads-api-sdk-go v1.0.0 h1:FpGQ+JmV72hvn4FuMDaLocd/
 github.com/LittleAksMax/amazon-ads-api-sdk-go v1.0.0/go.mod h1:tqToglAGC5XzEK8/RC79e0VcBWW7sQveb6PSqKt2v4Q=
 github.com/LittleAksMax/bids-util v1.0.0 h1:pbvH8h3eYpee6fyPcP8puGFifza6XSkb7CWciab5whU=
 github.com/LittleAksMax/bids-util v1.0.0/go.mod h1:8Hup3ATpBOUX8de/nALAVS/DgovuZJfgbzFmR2Ic6YI=
-github.com/LittleAksMax/bidscript v1.0.0 h1:w547o8CZ1BrTIDJ5fvE8uuxXBXU8d0t6ryzGrAhgMP4=
-github.com/LittleAksMax/bidscript v1.0.0/go.mod h1:+30EBk3CWed5StQb8Z6vT+Z+v/GJLTjAVPpNLiJLCU8=
+github.com/LittleAksMax/bidscript v1.0.1 h1:xrAHnTvNWTQzWCKrbhG+AVcVTbVVdCsI81aXO+Us7dc=
+github.com/LittleAksMax/bidscript v1.0.1/go.mod h1:+30EBk3CWed5StQb8Z6vT+Z+v/GJLTjAVPpNLiJLCU8=
 github.com/allegro/bigcache/v3 v3.1.0 h1:H2Vp8VOvxcrB91o86fUSVJFqeuz8kpyyB02eH3bSzwk=
 github.com/allegro/bigcache/v3 v3.1.0/go.mod h1:aPyh7jEvrog9zAwx5N7+JUQX5dZTSGpxF1LAR4dr35I=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

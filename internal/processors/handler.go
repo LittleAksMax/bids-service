@@ -110,7 +110,7 @@ func (p *Processor) handleMessage(ctx context.Context, msg ProcessMessage) {
 
 		p.logger.Infof("[UserID: %s; ProfileID: %d; PolicyID: %s; AdGroupID: %s] Evaluating policy", msg.UserID.String(), msg.Profile.ProfileID, adGroupPolicy.policy.ID, adGroupID)
 
-		result, err := p.evaluate(ctx, *adGroupPolicy.policy, adGroupReport)
+		result, err := p.evaluate(*adGroupPolicy.policy, adGroupReport)
 		if err != nil {
 			_, _ = p.userService.Log(ctx, msg.UserID, msg.Profile.ProfileID, fmt.Sprintf("Failed to evaluate policy %s on Ad Group %s. Skipping.", adGroupPolicy.policy.Name, adGroupReport.AdGroupName))
 			p.logger.Errorf("[UserID: %s; ProfileID: %d; PolicyID: %s; AdGroupID: %s] Failed to evaluate policy: %v", msg.UserID.String(), msg.Profile.ProfileID, adGroupPolicy.policy.ID, adGroupID, err)

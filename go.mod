@@ -9,7 +9,7 @@ require (
 
 require (
 	github.com/LittleAksMax/amazon-ads-api-sdk-go v1.0.0
-	github.com/LittleAksMax/bids-util v1.0.0
+	github.com/LittleAksMax/bids-util v1.0.1
 	github.com/LittleAksMax/bidscript v1.0.1
 	github.com/joho/godotenv v1.5.1
 )

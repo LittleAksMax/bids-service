@@ -118,11 +118,14 @@ func (c *UserServiceClient) GetTokens(ctx context.Context, userID uuid.UUID) (*U
 	return &tokens, nil
 }
 
-func (c *UserServiceClient) CreateBid(ctx context.Context, req CreateBidRequest) (*BidResponse, error) {
+func (c *UserServiceClient) CreateBid(ctx context.Context, userID uuid.UUID, req CreateBidRequest) (*BidResponse, error) {
 	bid, err := executeServiceRequest[BidResponse](ctx, &c.serviceClient, serviceRequest{
 		method: http.MethodPost,
 		path:   "/internal/users/user/bids",
 		body:   req,
+		headers: map[string]string{
+			serviceUserIDHeader: userID.String(),
+		},
 	})
 	if err != nil {
 		return nil, err

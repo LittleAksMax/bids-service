@@ -89,7 +89,6 @@ type createUserLogRequest struct {
 
 // CreateBidRequest represents a request to create a bid
 type CreateBidRequest struct {
-	UserID     string  `json:"user_id"`
 	ProfileID  int64   `json:"profile_id"`
 	CampaignID string  `json:"campaign_id"`
 	AdGroupID  string  `json:"adgroup_id"`

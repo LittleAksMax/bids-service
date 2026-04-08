@@ -61,8 +61,7 @@ func (p *Processor) publishChange(ctx context.Context, userID uuid.UUID, profile
 
 func (p *Processor) createBidChange(ctx context.Context, userID uuid.UUID, profile *services.RegionProfile, change *bidChangeResult) error {
 	return retries.Retry(writeChangeLogMaxAttempts, writeChangeLogBackoffTime, p.logger, func(ctx context.Context) error {
-		_, err := p.userService.CreateBid(ctx, services.CreateBidRequest{
-			UserID:     userID.String(),
+		_, err := p.userService.CreateBid(ctx, userID, services.CreateBidRequest{
 			ProfileID:  profile.ProfileID,
 			CampaignID: change.CampaignID,
 			AdGroupID:  change.AdGroupID,

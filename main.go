@@ -43,6 +43,12 @@ func main() {
 		log.Fatalf("error creating log directory: %v\n", err)
 	}
 
+	logDir, err := filepath.Abs(cfg.WorkersConfig.LogPath)
+	if err != nil {
+		log.Fatalf("error resolving log directory path: %v\n", err)
+	}
+	log.Println("Log directory:", logDir)
+
 	// Create context with SIGTERM signal available for graceful shutdown in case of interrupt
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	if err := run(ctx, cancel, cfg); err != nil {

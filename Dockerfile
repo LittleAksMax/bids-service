@@ -1,5 +1,7 @@
 # Build stage
-FROM golang:alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
+
+ARG TARGETARCH
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -9,7 +11,7 @@ COPY internal/ internal/
 COPY main.go main.go
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bids-service .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -a -installsuffix cgo -o bids-service .
 
 FROM gcr.io/distroless/base-debian12
 
